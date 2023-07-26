@@ -1,0 +1,33 @@
+[% USE KohaDates %]
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>Koha: Drive Up Window Item Mover Plugin: Configuration</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+<body>
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+<div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Drive Up Window Item Mover &rsaquo; Configuration</div>
+
+<div id="doc3">
+    <!-- We can access our own plugins resource files using the PLUGIN_PATH variable. -->
+    <h3>Koha: Drive Up Window Item Mover Plugin: Configuration</h3>
+
+    <!-- Notice our form here has no 'action', this is good, it means that our forms will always get passed back to 'plugins/run.pl'. You could hard code it instead if you prefer -->
+    <form method="get">
+        <!-- Always pass these two parameters so the plugin system knows what to execute! -->
+        <input type="hidden" name="class" value="[% CLASS %]"/>
+        <input type="hidden" name="method" value="[% METHOD %]"/>
+
+        <label for="mapping">Main library to pickup window mappings: </label>
+        <textarea type="text" name="mapping">[% mapping | html %]</textarea>
+
+        <input type="hidden" name="save" value="1" />
+
+        <p>
+        <input type="submit" value="Save configuration" />
+    </form>
+
+    <hr/>
+
+[% INCLUDE 'intranet-bottom.inc' %]
