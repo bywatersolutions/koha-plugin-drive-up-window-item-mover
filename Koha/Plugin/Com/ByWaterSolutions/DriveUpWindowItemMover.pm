@@ -7,6 +7,7 @@ use Modern::Perl;
 use base qw(Koha::Plugins::Base);
 
 use Mojo::JSON qw(decode_json);
+use YAML::XS qw(Load);
 
 ## Here we set our plugin version
 our $VERSION         = "{VERSION}";
@@ -20,12 +21,11 @@ our $metadata = {
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
-    description     =>
-      'Move items between main libraries and drive up windows automatically.'
+    description     => 'Move items between main libraries and drive up windows automatically.'
 };
 
 sub new {
-    my ( $class, $args ) = @_;
+    my ($class, $args) = @_;
 
     $args->{'metadata'} = $metadata;
     $args->{'metadata'}->{'class'} = $class;
@@ -36,29 +36,66 @@ sub new {
 }
 
 sub after_circ_action {
-    my ( $self, $params ) = @_;
+    my ($self, $params) = @_;
 
     my $action   = $params->{action};
     my $checkout = $params->{payload}->{checkout};
+
+    warn "CIRC ACTION: $action";
+    warn "CHECKOUT: $checkout";
+}
+
+sub after_item_action {
+    my ($self, $params) = @_;
+
+    my $action = $params->{action};
+    my $item   = $params->{item};
+
+    warn "ITEM ACTION: $action";
+    warn "ITEM: $item";
+}
+
+sub after_hold_action {
+    my ($self, $params) = @_;
+
+    my $action = $params->{action};
+    my $hold   = $params->{payload}->{hold};
+
+    my $item = $hold->item;
+    my $transfer = $item->get_transfer;
+
+    my $branches_to_windows = Load $self->retrieve_data('mapping');
+    my $windows_to_branches = {  map { $branches_to_windows->{$_} => $_ } keys %$branches_to_windows  };
+
+    my $to = $transfer->tobranch;
+    my $from = $transfer->frombranch;
+
+    if ( $branches_to_windows->{$from} eq $to ) {
+        $transfer->receive;
+        $item->update({ holdingbranch => $to });
+    } elsif ( $windows_to_branches{$from} eq $to ) {
+        $transfer->receive;
+        $item->update({ holdingbranch => $to });
+    }
+
+    warn "W2B: " . Data::Dumper::Dumper( $windows_to_branches );
+    warn "HOLD ACTION: $action";
+    warn "HOLD: $hold";
 }
 
 sub configure {
-    my ( $self, $args ) = @_;
+    my ($self, $args) = @_;
     my $cgi = $self->{'cgi'};
 
-    unless ( $cgi->param('save') ) {
-        my $template = $self->get_template( { file => 'configure.tt' } );
+    unless ($cgi->param('save')) {
+        my $template = $self->get_template({file => 'configure.tt'});
 
-        $template->param( mapping => $self->retrieve_data('mapping'), );
+        $template->param(mapping => $self->retrieve_data('mapping'),);
 
-        $self->output_html( $template->output() );
+        $self->output_html($template->output());
     }
     else {
-        $self->store_data(
-            {
-                mapping => $cgi->param('mapping'),
-            }
-        );
+        $self->store_data({mapping => $cgi->param('mapping'),});
         $self->go_home();
     }
 }
@@ -68,7 +105,7 @@ sub configure {
 ## The installation method should always return true if the installation succeeded
 ## or false if it failed.
 sub install() {
-    my ( $self, $args ) = @_;
+    my ($self, $args) = @_;
 
     return 1;
 }
@@ -76,7 +113,7 @@ sub install() {
 ## This is the 'upgrade' method. It will be triggered when a newer version of a
 ## plugin is installed over an existing older version of a plugin
 sub upgrade {
-    my ( $self, $args ) = @_;
+    my ($self, $args) = @_;
 
     return 1;
 }
@@ -85,7 +122,7 @@ sub upgrade {
 ## when a plugin is uninstalled. It is good practice to clean up
 ## after ourselves!
 sub uninstall() {
-    my ( $self, $args ) = @_;
+    my ($self, $args) = @_;
 
     return 1;
 }

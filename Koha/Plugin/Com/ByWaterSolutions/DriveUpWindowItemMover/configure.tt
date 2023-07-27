@@ -1,6 +1,9 @@
-[% USE KohaDates %]
+[% USE Asset %]
+[% USE raw %]
+[% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
  <title>Koha: Drive Up Window Item Mover Plugin: Configuration</title>
+[% Asset.css("lib/codemirror/codemirror.css") | $raw %]
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 <body>
@@ -20,7 +23,7 @@
         <input type="hidden" name="method" value="[% METHOD %]"/>
 
         <label for="mapping">Main library to pickup window mappings: </label>
-        <textarea type="text" name="mapping">[% mapping | html %]</textarea>
+        <textarea type="text" id="mapping" name="mapping">[% mapping | html %]</textarea>
 
         <input type="hidden" name="save" value="1" />
 
@@ -29,5 +32,21 @@
     </form>
 
     <hr/>
+[% MACRO jsinclude BLOCK %]
+    [% Asset.js( "lib/codemirror/codemirror.min.js" ) | $raw %]
+    [% Asset.js( "lib/codemirror/lint.min.js" ) | $raw %]
+    [% Asset.js( "lib/codemirror/yaml-lint.min.js" ) | $raw %]
+    <script>
+    $(document).ready(function(){
+        let editor = CodeMirror.fromTextArea( document.getElementById('mapping'), {
+            lineNumbers: true,
+            lineWrapping: true,
+            lint: true,
+            mode: "text/x-yaml",
+            viewportMargin: Infinity,
+        });
+    });
+    </script>
+[% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
