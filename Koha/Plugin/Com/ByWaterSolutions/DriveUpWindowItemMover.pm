@@ -41,18 +41,31 @@ sub after_circ_action {
     my $action   = $params->{action};
     my $checkout = $params->{payload}->{checkout};
 
-    warn "CIRC ACTION: $action";
-    warn "CHECKOUT: $checkout";
+    return unless $action eq 'checkin';
+
+    my $branches_to_windows = Load $self->retrieve_data('mapping');
+    my $windows_to_branches = {map { $branches_to_windows->{$_} => $_ } keys %$branches_to_windows};
+
+    my $item = $checkout->item;
+
+    if (my $housing_library = $windows_to_branches->{$item->holdingbranch}) {
+
+        # Item is currently at a pickup window
+        if ($item->holds({found => 'W'})->count == 0) {
+            $item->update({holdingbranch => $housing_library});
+
+            my $transfer = $item->get_transfer;
+            $transfer->receive if $transfer;
+        }
+    }
 }
 
+=head
 sub after_item_action {
     my ($self, $params) = @_;
 
     my $action = $params->{action};
     my $item   = $params->{item};
-
-    warn "ITEM ACTION: $action";
-    warn "ITEM: $item";
 }
 
 sub after_hold_action {
@@ -60,28 +73,8 @@ sub after_hold_action {
 
     my $action = $params->{action};
     my $hold   = $params->{payload}->{hold};
-
-    my $item = $hold->item;
-    my $transfer = $item->get_transfer;
-
-    my $branches_to_windows = Load $self->retrieve_data('mapping');
-    my $windows_to_branches = {  map { $branches_to_windows->{$_} => $_ } keys %$branches_to_windows  };
-
-    my $to = $transfer->tobranch;
-    my $from = $transfer->frombranch;
-
-    if ( $branches_to_windows->{$from} eq $to ) {
-        $transfer->receive;
-        $item->update({ holdingbranch => $to });
-    } elsif ( $windows_to_branches{$from} eq $to ) {
-        $transfer->receive;
-        $item->update({ holdingbranch => $to });
-    }
-
-    warn "W2B: " . Data::Dumper::Dumper( $windows_to_branches );
-    warn "HOLD ACTION: $action";
-    warn "HOLD: $hold";
 }
+=cut
 
 sub configure {
     my ($self, $args) = @_;
