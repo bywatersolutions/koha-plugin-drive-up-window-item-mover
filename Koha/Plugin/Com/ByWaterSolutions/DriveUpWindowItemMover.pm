@@ -9,6 +9,8 @@ use base qw(Koha::Plugins::Base);
 use Mojo::JSON qw(decode_json);
 use YAML::XS qw(Load);
 
+use Koha::Items;
+
 ## Here we set our plugin version
 our $VERSION         = "{VERSION}";
 our $MINIMUM_VERSION = "{MINIMUM_VERSION}";
@@ -57,6 +59,20 @@ sub after_circ_action {
             my $transfer = $item->get_transfer;
             $transfer->receive if $transfer;
         }
+    }
+}
+
+sub cronjob_nightly {
+    my ( $self ) = @_;
+
+    my $dbh = C4::Context->dbh;
+    my $sth = $dbh->prepare(qq{UPDATE items LEFT JOIN reserves USING ( itemnumber ) SET holdingbranch = homebranch WHERE holdingbranch = ? AND ( found != "W" AND found != 'T' )};
+
+    my $branches_to_windows = Load $self->retrieve_data('mapping');
+    my $windows_to_branches = {map { $branches_to_windows->{$_} => $_ } keys %$branches_to_windows};
+
+    foreach my $window ( keys %$windows_to_branches ) {
+        $sth->execute($window);
     }
 }
 
