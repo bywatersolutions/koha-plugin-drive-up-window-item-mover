@@ -63,15 +63,23 @@ sub after_circ_action {
 }
 
 sub cronjob_nightly {
-    my ( $self ) = @_;
+    my ($self) = @_;
 
     my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare(qq{UPDATE items LEFT JOIN reserves USING ( itemnumber ) SET holdingbranch = homebranch WHERE holdingbranch = ? AND ( found != "W" AND found != 'T' )};
+    my $sth = $dbh->prepare(q{
+        UPDATE items
+        LEFT JOIN reserves USING ( itemnumber )
+        SET holdingbranch = homebranch
+        WHERE
+            holdingbranch = ?
+          AND
+            ( found != "W" AND found != 'T' )
+    });
 
     my $branches_to_windows = Load $self->retrieve_data('mapping');
     my $windows_to_branches = {map { $branches_to_windows->{$_} => $_ } keys %$branches_to_windows};
 
-    foreach my $window ( keys %$windows_to_branches ) {
+    foreach my $window (keys %$windows_to_branches) {
         $sth->execute($window);
     }
 }
